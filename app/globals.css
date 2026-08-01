@@ -1,26 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+@keyframes cinematicFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-up {
+  opacity: 0;
+  animation: cinematicFade 5s ease forwards;
+}
+.fade-delay {
+  opacity: 0;
+  animation: cinematicFade 1.2s ease-out forwards;
+  animation-delay: 1.5s;
+}
+.fade-navbar {
+  opacity: 0;
+  animation: cinematicFade 1s ease-out forwards;
+  animation-delay: 2.8s;
 }
