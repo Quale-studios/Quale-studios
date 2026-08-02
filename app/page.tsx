@@ -1,6 +1,23 @@
-import Navbar from "../components/Navbar";
+"use client";
+
+import { useEffect, useState } from "react";
 
 export default function Home() {
+
+   const INTRO_DURATION = 3500;
+
+  const [showArrow, setShowArrow] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowArrow(true);
+    }, INTRO_DURATION);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+
+  
   return (
     <main className="relative min-h-screen bg-black">
 
@@ -14,7 +31,17 @@ export default function Home() {
         <p className="fade-delay mt-0 text-xl italic font-bold text-white/60 tracking-[0.04em]">
           Feel the silence
         </p>
+
+        
       </div>
+
+{showArrow && (
+  <div className="fixed bottom-10 left-1/2 -translate-x-1/2">
+    <span className="scroll-arrow text-3xl text-white/50">
+      ↓
+    </span>
+  </div>
+)}
 
     </main>
   );
