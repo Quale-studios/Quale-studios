@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
 
@@ -8,6 +8,15 @@ export default function Home() {
 
   const [showArrow, setShowArrow] = useState(false);
   const [hideArrow, setHideArrow] = useState(false);
+
+  const brandRef = useRef<HTMLDivElement>(null);
+const [showBrandWatch, setShowBrandWatch] = useState(false);
+
+const productRef = useRef<HTMLDivElement>(null);
+const adRef = useRef<HTMLDivElement>(null);
+
+const [showProductWatch, setShowProductWatch] = useState(false);
+const [showAdWatch, setShowAdWatch] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,7 +38,69 @@ export default function Home() {
   return () => window.removeEventListener("scroll", handleScroll);
 }, []);
 
-  
+useEffect(() => {
+  const handleScroll = () => {
+    if (!brandRef.current) return;
+
+    const rect = brandRef.current.getBoundingClientRect();
+
+    const sectionCenter = rect.top + rect.height / 2;
+    const screenCenter = window.innerHeight / 2;
+
+    setShowBrandWatch(
+      Math.abs(sectionCenter - screenCenter) < 100
+    );
+  };
+
+  handleScroll();
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
+useEffect(() => {
+  const handleScroll = () => {
+    if (!productRef.current) return;
+
+    const rect = productRef.current.getBoundingClientRect();
+
+    const sectionCenter = rect.top + rect.height / 2;
+    const screenCenter = window.innerHeight / 2;
+
+    setShowProductWatch(
+      Math.abs(sectionCenter - screenCenter) < 100
+    );
+  };
+
+  handleScroll();
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
+useEffect(() => {
+  const handleScroll = () => {
+    if (!adRef.current) return;
+
+    const rect = adRef.current.getBoundingClientRect();
+
+    const sectionCenter = rect.top + rect.height / 2;
+    const screenCenter = window.innerHeight / 2;
+
+    setShowAdWatch(
+      Math.abs(sectionCenter - screenCenter) < 100
+    );
+  };
+
+  handleScroll();
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
   return (
     <main className="relative bg-black">
 
@@ -76,57 +147,106 @@ export default function Home() {
 
   
 </div>
-<div className="min-h-screen flex items-center justify-center pt-8">
+<div
+  ref={brandRef}
+  className="min-h-screen flex items-center justify-center"
+>
 
-  <a
-    href="https://youtu.be/17ZR1mx5LGU?si=-kN94_I3wMEPKmrR"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group"
-  >
-    <h3 className="group relative text-center text-9xl italic font-light text-white">
-  Brand Film
+  <div className="flex items-center gap-24">
 
-  <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 h-px w-[90%] bg-white scale-x-0 origin-center transition-transform duration-300 ease-out group-hover:scale-x-100" />
-</h3>
-  </a>
+    <a
+      href="https://youtube.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group"
+    >
+      <h3 className="text-9xl italic font-light text-white">
+        Brand Films
+      </h3>
+    </a>
+<a
+  href="https://youtube.com/"
+  target="_blank"
+  rel="noopener noreferrer"
+  className={`watch-film relative inline-block group ml-8 mt-8 ${
+    showBrandWatch ? "watch-film-visible" : ""
+  }`}
+>
+    
+     <span>Watch now</span>
 
+  <span className="absolute left-0 -bottom-0 h-px w-full origin-left scale-x-0 bg-white transition-transform duration-500 ease-out group-hover:scale-x-100"></span>
+</a>
+  </div>
 
-</div>
-<div className="min-h-screen flex items-center justify-center pt-8">
-
-  <a
-    href="https://youtu.be/17ZR1mx5LGU?si=-kN94_I3wMEPKmrR"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group"
-  >
-    <h3 className="group relative text-center text-9xl italic font-light text-white">
-  Advertisement Film
-
-  <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 h-px w-[90%] bg-white scale-x-0 origin-center transition-transform duration-300 ease-out group-hover:scale-x-100" />
-</h3>
-  </a>
-
-
-</div>
-<div className="min-h-screen flex items-center justify-center pt-8">
-
-  <a
-    href="https://youtu.be/17ZR1mx5LGU?si=-kN94_I3wMEPKmrR"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group"
-  >
-    <h3 className="group relative text-center text-9xl italic font-light text-white">
-  Product Film
-
-  <span className="absolute left-1/2 -translate-x-1/2 -bottom-2 h-px w-[90%] bg-white scale-x-0 origin-center transition-transform duration-300 ease-out group-hover:scale-x-100" />
-</h3>
-  </a>
 
 
 </div>
-    </main>
+<div
+  ref={adRef}
+  className="min-h-screen flex items-center justify-center"
+>
+  <div className="flex items-center gap-24">
+
+    <a
+      href="YOUR_AD_FILM_LINK"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group"
+    >
+      <h3 className="text-9xl italic font-light text-white">
+        Advertisement Films
+      </h3>
+    </a>
+
+    <a
+      href="YOUR_AD_FILM_LINK"
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`watch-film relative inline-block group ml-8 mt-8 ${
+        showAdWatch ? "watch-film-visible" : ""
+      }`}
+    >
+      <span>Watch now</span>
+
+      <span className="absolute left-0 -bottom-0 h-px w-full origin-left scale-x-0 bg-white transition-transform duration-500 ease-out group-hover:scale-x-100"></span>
+    </a>
+
+  </div>
+</div>
+
+<div
+  ref={productRef}
+  className="min-h-screen flex items-center justify-center"
+>
+  <div className="flex items-center gap-24">
+
+    <a
+      href="YOUR_PRODUCT_FILM_LINK"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group"
+    >
+      <h3 className="text-9xl italic font-light text-white">
+        Product Films
+      </h3>
+    </a>
+
+    <a
+      href="YOUR_PRODUCT_FILM_LINK"
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`watch-film relative inline-block group ml-8 mt-8 ${
+        showProductWatch ? "watch-film-visible" : ""
+      }`}
+    >
+      <span>Watch now</span>
+
+      <span className="absolute left-0 -bottom-0 h-px w-full origin-left scale-x-0 bg-white transition-transform duration-500 ease-out group-hover:scale-x-100"></span>
+    </a>
+
+  </div>
+</div>
+     </main>
   );
 }

@@ -14,14 +14,14 @@ export default function Navbar() {
     return pathname === `/${page}`;
   };
   return (
-    <nav className="fade-navbar fixed top-0 left-0 z-50 w-full flex items-center justify-between px-8 py-8">
+    <nav className="fade-navbar fixed top-0 left-1 z-50 w-full flex items-center justify-between px-5 py-5">
 
       <Link href="/">
         <Image
-          src="/logo.png"
+          src="/Logo.png"
           alt="Quale Studios"
-          width={170}
-          height={50}
+          width={145}
+          height={40}
           priority
         />
       </Link>
