@@ -14,22 +14,23 @@ export default function Navbar() {
     return pathname === `/${page}`;
   };
   return (
-    <nav className="fade-navbar fixed top-0 left-1 z-50 w-full flex items-center justify-between px-5 py-5">
+  <nav className="fade-navbar fixed top-0 left-0 z-50 w-full flex items-center justify-between px-4 md:px-5 py-5">
 
-      <Link href="/">
-        <Image
-          src="/Logo.png"
-          alt="Quale Studios"
-          width={145}
-          height={40}
-          priority
-        />
+      <Link href="/" className="-ml-7 -mt-1 md:ml-0">
+       <Image
+  src="/Logo.png"
+  alt="Quale Studios"
+  width={145}
+  height={40}
+  priority
+  className="w-[90px] h-auto md:w-[145px]"
+/>
       </Link>
 
-      <div className="flex items-center gap-10">
+      <div className="flex items-center gap-4 md:gap-10">
         <Link
   href="/films"
-  className={`group relative text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
+  className={`group relative text-sm md:text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
     isActive("films")
       ? "text-white"
       : "text-white/40 hover:text-white"
@@ -46,7 +47,7 @@ export default function Navbar() {
 
         <Link
   href="/about"
-  className={`group relative text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
+  className={`group relative text-sm md:text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
     isActive("about")
       ? "text-white"
       : "text-white/40 hover:text-white"
@@ -61,7 +62,7 @@ export default function Navbar() {
 
        <Link
   href="/contact"
-  className={`group relative text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
+  className={`group relative text-sm md:text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
     isActive("contact")
       ? "text-white"
       : "text-white/40 hover:text-white"
@@ -79,7 +80,7 @@ export default function Navbar() {
 
         <Link
   href="/access-card"
-  className={`group relative text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
+  className={`group relative whitespace-nowrap text-sm md:text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
    isActive("access-card")
       ? "text-white"
       : "text-white/40 hover:text-white"
