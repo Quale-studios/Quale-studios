@@ -109,3 +109,36 @@ body {
   opacity: 1;
   pointer-events: auto;
 }
+.fade-line {
+  opacity: 0;
+}
+
+.fade-section.active .fade-line {
+  animation: fadeInSlow 1.5s ease forwards;
+}
+
+.fade-section.active .line-1 {
+  animation-delay: 0s;
+}
+
+.fade-section.active .line-2 {
+  animation-delay: 1s;
+}
+
+.fade-section.active .line-3 {
+  animation-delay: 2s;
+}
+
+.fade-section.active .line-4 {
+  animation-delay: 3s;
+}
+
+@keyframes fadeInSlow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
