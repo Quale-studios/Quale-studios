@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function AccessCardPage() {
 
@@ -150,19 +151,20 @@ useEffect(() => {
     </div>
   </div>
 
-  {/* Access Card Button */}
-  <button
-    type="button"
-    className="group absolute left-[50%] top-[66%] -translate-x-1/2 font italic text-3xl text-white md:left-[57%] md:top-[62%] md:translate-x-0 md:text-5xl"
-  >
-    <span className="relative">
-      Access Card
+{/* Access Card Button */}
+<Link
+  href="/access-card/details"
+  className="group absolute left-[50%] top-[66%] -translate-x-1/2 font italic text-3xl text-white md:left-[57%] md:top-[62%] md:translate-x-0 md:text-5xl"
+>
+  <span className="relative">
+    Access Card
 
-      <span className="absolute -bottom-2 left-0 h-[1px] w-0 bg-white transition-all duration-500 ease-out group-hover:w-full"></span>
-    </span>
-  </button>
+    <span className="absolute -bottom-2 left-0 h-[1px] w-0 bg-white transition-all duration-500 ease-out group-hover:w-full"></span>
+  </span>
+</Link>
 
 </section>
-      </main>
+
+</main>
   );
 }
