@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import Razorpay from "razorpay";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
+import { sendAccessCardEmail } from "@/lib/sendAccessCardEmail";
+import { generateAccessCard } from "@/lib/generateAccessCard";
+import { generateAccessCardPDF } from "@/lib/accessCardPdf";
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
@@ -62,10 +64,14 @@ export async function POST(request: Request) {
     const order = await razorpay.orders.fetch(razorpay_order_id);
 
     const name = order.notes?.name;
-    const businessName = order.notes?.businessName;
-    const email = order.notes?.email;
+const businessName = order.notes?.businessName;
+const email = order.notes?.email;
 
-    if (!name || !businessName || !email) {
+if (
+  typeof name !== "string" ||
+  typeof businessName !== "string" ||
+  typeof email !== "string"
+) {
       return NextResponse.json(
         { error: "Customer details not found on Razorpay order." },
         { status: 400 }
@@ -73,10 +79,20 @@ export async function POST(request: Request) {
     }
 
     // Generate unique Private ID
-    const privateId = crypto.randomBytes(6).toString("hex");
+    const privateId = crypto.randomBytes(32).toString("hex");
 
     console.log("Private ID generated:", privateId);
+    const { frontCard, backCard } =
+  await generateAccessCard(privateId);
 
+console.log("Access Card generated for Private ID:", privateId);
+
+const accessCardPDF = await generateAccessCardPDF(
+  frontCard,
+  backCard
+);
+
+console.log("Access Card PDF generated:", privateId);
     // Save Access Card
     const { data: accessCard, error: databaseError } =
       await supabaseAdmin
@@ -105,7 +121,15 @@ export async function POST(request: Request) {
     }
 
     console.log("Access Card saved:", accessCard);
-
+    
+try {
+  await sendAccessCardEmail(
+    email,
+    accessCardPDF
+  );
+} catch (emailError) {
+  console.error("Access Card email failed:", emailError);
+}
     return NextResponse.json({
       success: true,
       message: "Payment verified and Access Card saved.",

@@ -7,6 +7,7 @@ export default function AccessCardDetailsPage() {
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
+  const [paymentComplete, setPaymentComplete] = useState(false);
 
  const handleContinue = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -61,10 +62,13 @@ export default function AccessCardDetailsPage() {
           razorpay_signature: response.razorpay_signature,
         }),
       });
+const verifyData = await verifyResponse.json();
 
-      const verifyData = await verifyResponse.json();
+console.log("Verification response:", verifyData);
 
-      console.log("Verification response:", verifyData);
+if (verifyData.success) {
+  setPaymentComplete(true);
+}
 
     } catch (error) {
       console.error("Verification request failed:", error);
@@ -86,7 +90,13 @@ razorpay.open();
   src="https://checkout.razorpay.com/v1/checkout.js"
   strategy="afterInteractive"
 />
-
+{paymentComplete ? (
+  <div className="flex min-h-screen items-center justify-center">
+    <h1 className="font italic text-5xl text-white">
+      Check your mail.
+    </h1>
+  </div>
+) : (
       <form
         onSubmit={handleContinue}
         className="relative min-h-screen"
@@ -150,7 +160,7 @@ razorpay.open();
         </button>
 
       </form>
-
+)}
     </main>
   );
 }
