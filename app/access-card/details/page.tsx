@@ -8,9 +8,16 @@ export default function AccessCardDetailsPage() {
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
  const handleContinue = async (e: React.FormEvent) => {
   e.preventDefault();
+
+  if (!razorpayLoaded) {
+    console.error("Razorpay is still loading.");
+    return;
+  }
 
   try {
     const response = await fetch("/api/access-card", {
@@ -50,7 +57,9 @@ export default function AccessCardDetailsPage() {
   },
 
   handler: async function (response: any) {
-    try {
+  setProcessing(true);
+
+  try {
       const verifyResponse = await fetch("/api/access-card/verify", {
         method: "POST",
         headers: {
@@ -86,16 +95,56 @@ razorpay.open();
 };
   return (
     <main className="min-h-screen bg-black text-white">
-      <Script
+    <Script
   src="https://checkout.razorpay.com/v1/checkout.js"
   strategy="afterInteractive"
+  onLoad={() => setRazorpayLoaded(true)}
 />
 {paymentComplete ? (
   <div className="flex min-h-screen items-center justify-center">
-    <h1 className="font italic text-5xl text-white">
-      Check your mail.
-    </h1>
+    <h1 className="px-6 text-center font italic text-4xl text-white sm:text-5xl">
+  Check your mail.
+</h1>
   </div>
+) : processing ? (
+  <div className="flex min-h-screen items-center justify-center">
+  <h1 className="font italic text-4xl text-white sm:text-5xl">
+  Processing
+  <span className="processing-dot delay-0">.</span>
+  <span className="processing-dot delay-1">.</span>
+  <span className="processing-dot delay-2">.</span>
+</h1>
+
+  <style jsx>{`
+    .processing-dot {
+      opacity: 0.45;
+      animation: processingPulse 1.2s infinite;
+    }
+
+    .delay-0 {
+      animation-delay: 0s;
+    }
+
+    .delay-1 {
+      animation-delay: 0.2s;
+    }
+
+    .delay-2 {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes processingPulse {
+      0%,
+      100% {
+        opacity: 0.45;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+  `}</style>
+</div>
 ) : (
       <form
         onSubmit={handleContinue}

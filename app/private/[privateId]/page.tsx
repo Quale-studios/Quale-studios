@@ -8,10 +8,11 @@ export default async function PrivatePage({
   const { privateId } = await params;
 
   const { data: accessCard, error } = await supabaseAdmin
-    .from("access_cards")
-    .select("name, business_name, email, private_id")
-    .eq("private_id", privateId)
-    .single();
+  .from("access_cards")
+  .select("name, business_name, private_id, is_active")
+  .eq("private_id", privateId)
+  .eq("is_active", true)
+  .single();
 
   if (error || !accessCard) {
     return (
@@ -36,9 +37,7 @@ export default async function PrivatePage({
           {accessCard.business_name}
         </p>
 
-        <p className="mt-2 text-sm text-white/60">
-          {accessCard.private_id}
-        </p>
+        
       </div>
     </main>
   );
