@@ -62,13 +62,16 @@ export default async function QuestionsPage({
   }
 
   return (
-  <main className="min-h-screen bg-black text-white flex items-center justify-center">
+  <main className="min-h-[calc(100dvh-80px)] w-full bg-black text-white">
     <QuestionForm
+    key={question.question_key}
       sessionId={session.id}
       questionKey={question.question_key}
       question={question.question}
       questionType={question.question_type}
       options={question.options}
+      currentQuestion={session.current_question}
+      sessionStatus={session.status}
     />
   </main>
 );

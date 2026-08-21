@@ -3,26 +3,18 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const { sessionId } = await request.json();
 
-    const {
-      sessionId,
-      questionKey,
-      answer,
-      continueAnyway,
-    } = body;
-
-    if (!sessionId || !questionKey || answer === undefined) {
+    if (!sessionId) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing session ID" },
         { status: 400 }
       );
     }
 
-    // Check the Creative Session
     const { data: session, error: sessionError } = await supabaseAdmin
       .from("creative_sessions")
-      .select("id, status, current_question")
+      .select("id, current_question, status")
       .eq("id", sessionId)
       .single();
 
@@ -33,7 +25,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Don't allow changes after final submission
     if (session.status === "submitted") {
       return NextResponse.json(
         { error: "Creative session already submitted" },
@@ -41,47 +32,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Save or update the answer
-    const { error: answerError } = await supabaseAdmin
-      .from("creative_answers")
-      .upsert(
-        {
-          creative_session_id: sessionId,
-          question_key: questionKey,
-          answer: answer,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "creative_session_id,question_key",
-        }
-      );
-
-    if (answerError) {
-      console.error(answerError);
-
-      return NextResponse.json(
-        { error: "Failed to save answer" },
-        { status: 500 }
-      );
-    }
-
-    // Q1 + "Bad" = pause before moving forward
-    if (
-      questionKey === "q01" &&
-      answer === "bad" &&
-      !continueAnyway
-    ) {
+    // Never go before Q1
+    if (session.current_question <= 1) {
       return NextResponse.json({
         success: true,
-        needsRest: true,
+        currentQuestion: 1,
       });
     }
 
-    // Move to the next question
+    const previousQuestion = session.current_question - 1;
+
     const { error: updateError } = await supabaseAdmin
       .from("creative_sessions")
       .update({
-        current_question: session.current_question + 1,
+        current_question: previousQuestion,
         updated_at: new Date().toISOString(),
       })
       .eq("id", sessionId);
@@ -90,13 +54,14 @@ export async function POST(request: Request) {
       console.error(updateError);
 
       return NextResponse.json(
-        { error: "Answer saved, but failed to move to next question" },
+        { error: "Failed to go to previous question" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
+      currentQuestion: previousQuestion,
     });
 
   } catch (error) {
