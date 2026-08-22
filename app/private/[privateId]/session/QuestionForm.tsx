@@ -1,6 +1,5 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Option = {
@@ -16,6 +15,7 @@ type QuestionFormProps = {
   question: string;
   questionType: string;
   options: Option[] | null;
+  initialAnswer: string;
 };
 
 export default function QuestionForm({
@@ -26,18 +26,33 @@ export default function QuestionForm({
   question,
   questionType,
   options,
+  initialAnswer,
 }: QuestionFormProps) {
-    console.log("QUESTION FORM RENDERING:", {
-    currentQuestion,
-    questionKey,
-    question,
-    questionType,
-  });
+   
   const router = useRouter();
 
   const [saving, setSaving] = useState(false);
-  const [textAnswer, setTextAnswer] = useState("");
+  const [textAnswer, setTextAnswer] = useState(initialAnswer);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>(
+  Array.isArray(initialAnswer)
+    ? initialAnswer
+    : typeof initialAnswer === "string" && initialAnswer
+      ? initialAnswer.split(",")
+      : []
+);
   const [needsRest, setNeedsRest] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [readyToSubmit, setReadyToSubmit] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+  setIsVisible(false);
+
+  const timer = requestAnimationFrame(() => {
+    setIsVisible(true);
+  });
+
+  return () => cancelAnimationFrame(timer);
+}, [questionKey]);
 
   const handleAnswer = async (
     answer: string | string[],
@@ -74,7 +89,13 @@ export default function QuestionForm({
   setSaving(false);
   return;
 }
+// Ready for final review / submission
 
+if (data.readyToSubmit) {
+  setReadyToSubmit(true);
+  setSaving(false);
+  return;
+}
 // Normal navigation
 router.refresh();
 
@@ -112,6 +133,39 @@ router.refresh();
     }
   };
 
+  const handleFinalSubmit = async () => {
+  if (saving) return;
+
+  setSaving(true);
+
+  try {
+    const response = await fetch("/api/creative-submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit creative session");
+    }
+
+    const data = await response.json();
+
+    if (data.submitted) {
+      setCompleted(true);
+      setReadyToSubmit(false);
+      setSaving(false);
+    }
+  } catch (error) {
+    console.error(error);
+    setSaving(false);
+  }
+};
+
   const handleTextContinue = () => {
     const answer = textAnswer.trim();
 
@@ -119,7 +173,18 @@ router.refresh();
 
     handleAnswer(answer);
   };
+const handleMultiContinue = () => {
+  if (selectedOptions.length === 0 || saving) return;
 
+  handleAnswer(selectedOptions);
+};
+const toggleOption = (value: string) => {
+  setSelectedOptions((current) =>
+    current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value]
+  );
+};
   /*
    * SPECIAL SCREEN
    * Only appears when Q01 = Bad.
@@ -168,7 +233,78 @@ router.refresh();
       </div>
     );
   }
+  if (readyToSubmit) {
+  return (
+    <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
+      <div className="absolute inset-0 z-10 flex items-center justify-center px-8">
+        <div className="w-full max-w-5xl text-center">
 
+          <h1 className="text-3xl font-light italic sm:text-4xl md:text-5xl lg:text-7xl">
+            Your creative session is ready.
+            <br />
+            Review your answers before submitting.
+          </h1>
+
+          <div className="mt-12 flex items-center justify-center gap-12">
+
+  <button
+    type="button"
+    onClick={() => setReadyToSubmit(false)}
+    disabled={saving}
+    className="
+      text-xl
+      italic
+      text-white/50
+      transition-colors
+      duration-300
+      hover:text-white
+      disabled:opacity-30
+      sm:text-2xl
+    "
+  >
+    Review Answers
+  </button>
+
+  <button
+    type="button"
+    onClick={handleFinalSubmit}
+    disabled={saving}
+    className="
+      text-xl
+      italic
+      text-white/75
+      transition-colors
+      duration-300
+      hover:text-white
+      disabled:opacity-30
+      sm:text-2xl
+    "
+  >
+    Final Submit
+  </button>
+
+</div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+if (completed) {
+  return (
+    <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
+      <div className="absolute inset-0 z-10 flex items-center justify-center px-8">
+        <div className="w-full max-w-5xl text-center">
+          <h1 className="text-3xl font-light italic sm:text-4xl md:text-5xl lg:text-7xl">
+            Thank you.
+            <br />
+            Your creative session is complete.
+          </h1>
+        </div>
+      </div>
+    </div>
+  );
+}
   /*
    * NORMAL QUESTION SCREEN
    *
@@ -179,7 +315,11 @@ router.refresh();
     <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
 
       {/* Main question */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center px-8 pointer-events-none">
+      <div
+  className={`absolute inset-0 z-10 flex items-center justify-center px-8 pointer-events-none transition-opacity duration-700 ease-out ${
+    isVisible ? "opacity-100" : "opacity-0"
+  }`}
+>
         <div className="w-full max-w-5xl text-center">
 
           {/* Question */}
@@ -188,58 +328,108 @@ router.refresh();
           </h1>
 
           {/* TEXT QUESTION */}
-          {questionType === "text" && (
-            <div className="pointer-events-auto mx-auto mt-8 w-full max-w-2xl">
+  {/* TEXT QUESTION */}
+{questionType === "text" && (
+  <div className="pointer-events-auto mx-auto mt-8 w-full max-w-2xl">
 
-              <input
-                type="text"
-                value={textAnswer}
-                onChange={(e) => setTextAnswer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleTextContinue();
-                  }
-                }}
-                placeholder="Write your answer..."
-                disabled={saving}
-                className="
-                  w-full
-                  border-b
-                  border-white/20
-                  bg-transparent
-                  px-2
-                  py-3
-                  text-center
-                  text-xl
-                  italic
-                  text-white
-                  outline-none
-                  placeholder:text-white/30
-                  focus:border-white/60
-                  transition-colors
-                  duration-300
-                "
-              />
+    {/* Answer box */}
+<div className="relative w-full">
+ <textarea
+  value={textAnswer}
+  onChange={(e) => setTextAnswer(e.target.value)}
+  disabled={saving}
+  rows={4}
+  className="
+    block
+    h-40
+    w-full
+    resize-none
+    rounded-2xl
+    border
+    border-white/30
+    bg-transparent
+    px-6
+    py-5
+    text-center
+    text-xl
+    italic
+    leading-relaxed
+    text-white
+    outline-none
+    focus:border-white/70
+  "
+  />
 
-              <button
-                onClick={handleTextContinue}
-                disabled={!textAnswer.trim() || saving}
-                className="
-                  mt-8
-                  text-lg
-                  italic
-                  text-white/60
-                  transition-colors
-                  duration-300
-                  hover:text-white
-                  disabled:opacity-20
-                "
-              >
-                Continue
-              </button>
+  {!textAnswer && (
+    <div
+      className="
+        pointer-events-none
+        absolute
+        inset-0
+        flex
+        items-start
+        justify-center
+        px-6
+        py-5
+        text-xl
+        italic
+        leading-relaxed
+        text-white/30
+      "
+    >
+      Write your answer...
+    </div>
+  )}
+</div>
+     {/* Actions */}
+    <div className="mt-8 flex w-full items-center justify-center">
 
-            </div>
-          )}
+      {/* Undo */}
+     <button
+  type="button"
+  onClick={() => setTextAnswer("")}
+  disabled={!textAnswer.trim() || saving}
+  className="
+    min-w-[70px]
+    mr-8
+    text-center
+    text-xl
+    italic
+    text-white/50
+    transition-colors
+    duration-300
+    hover:text-white
+    disabled:cursor-default
+    disabled:text-white/20
+  "
+>
+  Undo
+</button>
+      {/* Continue */}
+   <button
+  type="button"
+  onClick={handleTextContinue}
+  disabled={!textAnswer.trim() || saving}
+  className="
+    min-w-[90px]
+    text-center
+    text-xl
+    italic
+    text-white/75
+    transition-colors
+    duration-300
+    hover:text-white
+    disabled:cursor-default
+    disabled:text-white/40
+  "
+>
+  Continue
+</button>
+
+    </div>
+
+  </div>
+)}
 
           {/* MCQ */}
           {questionType === "single" &&
@@ -284,7 +474,83 @@ router.refresh();
 
               </div>
             )}
+{/* MULTI SELECT */}
+{questionType === "multi" &&
+  Array.isArray(options) && (
+    <div className="pointer-events-auto mt-8 flex flex-wrap justify-center gap-x-8 gap-y-5 sm:mt-9 sm:gap-x-10 md:mt-10 md:gap-10">
 
+      {options.map((option) => {
+        const isSelected = selectedOptions.includes(option.value);
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => toggleOption(option.value)}
+            disabled={saving}
+            className={`
+              relative
+              text-xl
+              italic
+              font-normal
+              transition-all
+              duration-300
+              sm:text-2xl
+
+              ${
+                isSelected
+                  ? "text-white"
+                  : "text-white/70 hover:text-white"
+              }
+
+              after:absolute
+              after:-bottom-2
+              after:left-0
+              after:h-px
+              after:w-full
+              after:origin-left
+              after:bg-white
+              after:transition-transform
+              after:duration-300
+              after:content-['']
+
+              ${
+                isSelected
+                  ? "after:scale-x-100"
+                  : "after:scale-x-0 hover:after:scale-x-100"
+              }
+
+              disabled:opacity-30
+            `}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+
+      <div className="mt-8 flex w-full justify-center">
+        <button
+          type="button"
+          onClick={handleMultiContinue}
+          disabled={selectedOptions.length === 0 || saving}
+          className="
+            min-w-[90px]
+            text-xl
+            italic
+            text-white/75
+            transition-colors
+            duration-300
+            hover:text-white
+            disabled:cursor-default
+            disabled:text-white/40
+          "
+        >
+          Continue
+        </button>
+      </div>
+
+    </div>
+  )}
         </div>
       </div>
 
@@ -348,5 +614,6 @@ router.refresh();
       </div>
 
     </div>
+    
   );
 }

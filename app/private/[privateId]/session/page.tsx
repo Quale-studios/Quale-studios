@@ -60,19 +60,30 @@ export default async function QuestionsPage({
       </main>
     );
   }
+  // Load the client's existing answer for this question
+  const { data: existingAnswer, error: answerError } = await supabaseAdmin
+    .from("creative_answers")
+    .select("answer")
+    .eq("creative_session_id", session.id)
+    .eq("question_key", question.question_key)
+    .maybeSingle();
 
+  if (answerError) {
+    console.error("ANSWER LOAD ERROR:", answerError);
+  }
   return (
   <main className="min-h-[calc(100dvh-80px)] w-full bg-black text-white">
     <QuestionForm
-    key={question.question_key}
-      sessionId={session.id}
-      questionKey={question.question_key}
-      question={question.question}
-      questionType={question.question_type}
-      options={question.options}
-      currentQuestion={session.current_question}
-      sessionStatus={session.status}
-    />
+  key={question.question_key}
+  sessionId={session.id}
+  questionKey={question.question_key}
+  question={question.question}
+  questionType={question.question_type}
+  options={question.options}
+  currentQuestion={session.current_question}
+  sessionStatus={session.status}
+  initialAnswer={existingAnswer?.answer ?? ""}
+/>
   </main>
 );
 }

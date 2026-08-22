@@ -142,3 +142,16 @@ body {
     opacity: 1;
   }
 }
+@keyframes questionFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-question {
+  animation: questionFadeIn 8.2s ease-out;
+}
