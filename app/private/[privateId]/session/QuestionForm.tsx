@@ -293,15 +293,68 @@ const toggleOption = (value: string) => {
 if (completed) {
   return (
     <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
+
+      {/* Main content */}
       <div className="absolute inset-0 z-10 flex items-center justify-center px-8">
-        <div className="w-full max-w-5xl text-center">
-          <h1 className="text-3xl font-light italic sm:text-4xl md:text-5xl lg:text-7xl">
-            Thank you.
-            <br />
-            Your creative session is complete.
-          </h1>
+        <div className="w-full max-w-6xl">
+
+          <div className="max-w-4xl">
+            <h1 className="text-3xl font-light italic text-white sm:text-4xl md:text-5xl lg:text-6xl">
+              Your details have been received.
+            </h1>
+
+            <p className="mt-14 text-2xl font-light italic text-white/75 sm:text-3xl md:text-4xl">
+              You will receive the following within 7 days:
+            </p>
+
+            <div className="mt-10 space-y-6 text-xl font-light italic text-white/75 sm:text-2xl md:text-3xl">
+              <p>• Story concepts (Two)</p>
+              <p>• Story explanations</p>
+              <p>• Rough scripts based on the stories (Two)</p>
+            </div>
+          </div>
+
         </div>
       </div>
+
+      {/* Track Progress */}
+      <div
+        className="
+          absolute
+          bottom-6
+          right-6
+          z-20
+          text-right
+
+          sm:bottom-8
+          sm:right-10
+
+          md:bottom-12
+          md:right-16
+        "
+      >
+        <p className="text-xl font-light italic text-white/75 sm:text-2xl">
+          And you can also
+        </p>
+
+        <button
+          type="button"
+          className="
+            mt-2
+            text-xl
+            font-light
+            italic
+            text-white/75
+            transition-colors
+            duration-300
+            hover:text-white
+            sm:text-2xl
+          "
+        >
+          Track Progress
+        </button>
+      </div>
+
     </div>
   );
 }
@@ -432,48 +485,55 @@ if (completed) {
 )}
 
           {/* MCQ */}
-          {questionType === "single" &&
-            Array.isArray(options) && (
-              <div className="pointer-events-auto mt-8 flex flex-wrap justify-center gap-x-8 gap-y-5 sm:mt-9 sm:gap-x-10 md:mt-10 md:gap-10">
+          {/* MCQ */}
+{questionType === "single" &&
+  Array.isArray(options) && (
+    <div className="pointer-events-auto mt-8 flex flex-wrap justify-center gap-x-8 gap-y-5 sm:mt-9 sm:gap-x-10 md:mt-10 md:gap-10">
 
-                {options.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleAnswer(option.value)}
-                    disabled={saving}
-                    className="
-                      relative
-                      text-xl
-                      italic
-                      font-normal
-                      text-white/70
-                      transition-all
-                      duration-300
-                      hover:text-white
-                      disabled:opacity-30
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => handleAnswer(option.value)}
+          disabled={saving}
+          className="
+            flex
+            items-center
+            gap-4
+            text-xl
+            italic
+            font-normal
+            text-white/70
+            transition-all
+            duration-300
+            hover:text-white
+            disabled:opacity-30
+            sm:text-2xl
+          "
+        >
+          <span
+            style={{
+              display: "block",
+              width: "20px",
+              height: "20px",
+              minWidth: "20px",
+              minHeight: "20px",
+              flexShrink: 0,
+              boxSizing: "border-box",
+              border: "1px solid rgba(255,255,255,0.4)",
+              borderRadius: "6px",
+              backgroundColor: "transparent",
+              transition: "all 0.3s ease",
+            }}
+          />
 
-                      after:absolute
-                      after:-bottom-2
-                      after:left-0
-                      after:h-px
-                      after:w-full
-                      after:origin-left
-                      after:scale-x-0
-                      after:bg-white
-                      after:transition-transform
-                      after:duration-300
-                      after:content-['']
-                      hover:after:scale-x-100
+          <span>{option.label}</span>
+        </button>
+      ))}
 
-                      sm:text-2xl
-                    "
-                  >
-                    {option.label}
-                  </button>
-                ))}
-
-              </div>
-            )}
+    </div>
+  )}
+{/* MULTI SELECT */}
 {/* MULTI SELECT */}
 {questionType === "multi" &&
   Array.isArray(options) && (
@@ -489,7 +549,9 @@ if (completed) {
             onClick={() => toggleOption(option.value)}
             disabled={saving}
             className={`
-              relative
+              flex
+              items-center
+              gap-4
               text-xl
               italic
               font-normal
@@ -503,27 +565,30 @@ if (completed) {
                   : "text-white/70 hover:text-white"
               }
 
-              after:absolute
-              after:-bottom-2
-              after:left-0
-              after:h-px
-              after:w-full
-              after:origin-left
-              after:bg-white
-              after:transition-transform
-              after:duration-300
-              after:content-['']
-
-              ${
-                isSelected
-                  ? "after:scale-x-100"
-                  : "after:scale-x-0 hover:after:scale-x-100"
-              }
-
               disabled:opacity-30
             `}
           >
-            {option.label}
+            <span
+              style={{
+                display: "block",
+                width: "20px",
+                height: "20px",
+                minWidth: "20px",
+                minHeight: "20px",
+                flexShrink: 0,
+                boxSizing: "border-box",
+                border: isSelected
+                  ? "1px solid #ffffff"
+                  : "1px solid rgba(255,255,255,0.4)",
+                borderRadius: "6px",
+                backgroundColor: isSelected
+                  ? "#ffffff"
+                  : "transparent",
+                transition: "all 0.3s ease",
+              }}
+            />
+
+            <span>{option.label}</span>
           </button>
         );
       })}

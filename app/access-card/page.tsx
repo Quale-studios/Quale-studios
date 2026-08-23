@@ -144,7 +144,7 @@ useEffect(() => {
   {/* Set 3 */}
   <div className="absolute left-[7%] top-[46%] font italic text-2xl text-white md:left-[13%] md:top-[46%] md:text-5xl">
     <div>
-      with Q&As to explain your business & fixed prices, only once you
+      with Q&As to explain your business, only once you
     </div>
     <div>
       enter your own world through...
