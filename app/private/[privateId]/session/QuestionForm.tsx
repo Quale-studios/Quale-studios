@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Option = {
   label: string;
@@ -41,7 +42,9 @@ export default function QuestionForm({
       : []
 );
   const [needsRest, setNeedsRest] = useState(false);
-  const [completed, setCompleted] = useState(false);
+ const [completed, setCompleted] = useState(
+  sessionStatus === "submitted"
+);
   const [readyToSubmit, setReadyToSubmit] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -290,71 +293,96 @@ const toggleOption = (value: string) => {
     </div>
   );
 }
+
 if (completed) {
+  
   return (
-    <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
-
+   <div className="relative h-full w-full overflow-hidden">
       {/* Main content */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center px-8">
-        <div className="w-full max-w-6xl">
+ <div className="completion-main relative z-10 flex min-h-[calc(100dvh-80px)] items-start px-6 pt-14 sm:px-10 sm:pt-40 md:px-16 md:pt-72">
 
-          <div className="max-w-4xl">
-            <h1 className="text-3xl font-light italic text-white sm:text-4xl md:text-5xl lg:text-6xl">
-              Your details have been received.
-            </h1>
+  <div className="relative top-4 w-full max-w-6xl md:-translate-y-36 md:translate-x-38">
 
-            <p className="mt-14 text-2xl font-light italic text-white/75 sm:text-3xl md:text-4xl">
-              You will receive the following within 7 days:
-            </p>
+    <div className="max-w-4xl">
 
-            <div className="mt-10 space-y-6 text-xl font-light italic text-white/75 sm:text-2xl md:text-3xl">
-              <p>• Story concepts (Two)</p>
-              <p>• Story explanations</p>
-              <p>• Rough scripts based on the stories (Two)</p>
-            </div>
+      <h1 className="text-3xl font-light italic text-white sm:text-3xl md:text-5xl lg:text-6xl">
+        Your details have been received.
+      </h1>
+
+      <p className="mt-10 text-2xl font-light italic text-white/75 sm:mt-10 sm:text-2xl md:mt-14 md:text-4xl">
+        You will receive the following within 7 days:
+      </p>
+
+      <div className="mt-8 space-y-4 text-xl font-light italic text-white/75 sm:mt-8 sm:space-y-4 sm:text-xl md:mt-10 md:space-y-6 md:text-3xl">
+        <p>• Story concepts (Two)</p>
+        <p>• Story explanations</p>
+        <p>• Rough scripts based on the stories (Two)</p>
+
+        <p className="mt-8 max-w-2xl text-xl font-light leading-relaxed text-white sm:mt-8 sm:max-w-2xl sm:text-lg md:mt-10 md:max-w-3xl md:text-3xl">
+          After you Quale these, we can start Pre-Production, Production, and
+          Post-Production.
+        </p>
+      </div>
           </div>
 
         </div>
       </div>
 
       {/* Track Progress */}
-      <div
-        className="
-          absolute
-          bottom-6
-          right-6
-          z-20
-          text-right
+<div
+  className="
+    absolute
+    bottom-8
+    right-6
+    z-20
+    w-max
+    text-right
 
-          sm:bottom-8
-          sm:right-10
+    sm:bottom-8
+    sm:right-10
 
-          md:bottom-12
-          md:right-16
-        "
-      >
-        <p className="text-xl font-light italic text-white/75 sm:text-2xl">
-          And you can also
-        </p>
+    md:bottom-20
+    md:right-16
+  "
+>
+  <p className="whitespace-nowrap text-xl font-light italic text-white/45 sm:text-2xl">
+    And you can also
+  </p>
 
-        <button
-          type="button"
-          className="
-            mt-2
-            text-xl
-            font-light
-            italic
-            text-white/75
-            transition-colors
-            duration-300
-            hover:text-white
-            sm:text-2xl
-          "
-        >
-          Track Progress
-        </button>
-      </div>
+  <Link
+  href={`/private/$[privateId]/track-progress`}
+  type="button"
+  className="
+    relative
+    mt-2
+    cursor-pointer
+    text-xl
+    font-light
+    italic
+    text-white/75
+    transition-colors
+    duration-300
+    hover:text-white
+    sm:text-2xl
 
+    after:absolute
+    after:-bottom-2
+    after:left-0
+    after:h-px
+    after:w-full
+    after:origin-left
+    after:scale-x-100
+    sm:after:scale-x-0
+    after:bg-white
+    after:transition-transform
+    after:duration-300
+    sm:hover:after:scale-x-100
+    after:content-['']
+  "
+>
+  Track Progress
+</Link>
+</div>
     </div>
   );
 }
