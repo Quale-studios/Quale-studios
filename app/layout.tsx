@@ -16,7 +16,7 @@ const cormorant = localFont({
       style: "italic",
     },
   ],
-  display: "block",
+  display: "swap",
 });
 
 

@@ -1,5 +1,3 @@
-import Navbar from "../../components/Navbar";
-
 export default function FilmsPage() {
   return (
     <main className="min-h-screen bg-black text-white">
