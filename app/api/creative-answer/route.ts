@@ -1,255 +1,559 @@
-import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { NextResponse } from 'next/server';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { requireAdmin } from '@/lib/adminAuth';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-type Condition = {
-  question: string;
-  contains: string;
-};
-
-type Conditions = {
-  all?: (Condition | Conditions)[];
-  any?: (Condition | Conditions)[];
-};
-
-function answerContains(answer: unknown, value: string): boolean {
+function formatAnswer(answer: unknown): string {
   if (Array.isArray(answer)) {
-    return answer.includes(value);
+    return answer.join(', ');
   }
 
-  if (typeof answer === "string") {
-    return answer === value;
+  if (typeof answer === 'string') {
+    return answer;
   }
 
-  return false;
+  if (answer === null || answer === undefined) {
+    return 'No answer';
+  }
+
+  return JSON.stringify(answer, null, 2);
 }
 
-function conditionsMatch(
-  condition: Condition | Conditions | null,
-  answers: Record<string, unknown>
-): boolean {
-  // No condition = always visible
-  if (!condition) {
-    return true;
-  }
-
-  // Simple condition:
-  // { question: "q08", contains: "product_film" }
-  if ("question" in condition && "contains" in condition) {
-    return answerContains(
-      answers[condition.question],
-      condition.contains
-    );
-  }
-
-  // ALL conditions must match
-  if ("all" in condition && Array.isArray(condition.all)) {
-    return condition.all.every((item) =>
-      conditionsMatch(item, answers)
-    );
-  }
-
-  // ANY condition can match
-  if ("any" in condition && Array.isArray(condition.any)) {
-    return condition.any.some((item) =>
-      conditionsMatch(item, answers)
-    );
-  }
-
-  return false;
+function sanitizeFileName(value: string) {
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'client'
+  );
 }
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
+function pdfSafeText(value: string) {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '?');
+}
 
-    const {
-      sessionId,
-      questionKey,
-      answer,
-      continueAnyway,
-    } = body;
+function wrapText(
+  text: string,
+  font: Awaited<ReturnType<PDFDocument['embedFont']>>,
+  fontSize: number,
+  maxWidth: number
+) {
+  const paragraphs = pdfSafeText(text).split('\n');
+  const lines: string[] = [];
 
-    if (!sessionId || !questionKey || answer === undefined) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+  for (const paragraph of paragraphs) {
+    if (!paragraph.trim()) {
+      lines.push('');
+      continue;
     }
 
-    // --------------------------------------------------
-    // Get Creative Session
-    // --------------------------------------------------
+    const words = paragraph.split(/\s+/);
+    let currentLine = '';
 
-    const { data: session, error: sessionError } =
-      await supabaseAdmin
-        .from("creative_sessions")
-        .select("id, status, current_question")
-        .eq("id", sessionId)
-        .single();
+    for (const word of words) {
+      const testLine = currentLine
+        ? `${currentLine} ${word}`
+        : word;
 
-    if (sessionError || !session) {
-      return NextResponse.json(
-        { error: "Creative session not found" },
-        { status: 404 }
+      const width = font.widthOfTextAtSize(
+        testLine,
+        fontSize
       );
-    }
 
-    // Don't allow changes after final submission
-    if (session.status === "submitted") {
-      return NextResponse.json(
-        { error: "Creative session already submitted" },
-        { status: 400 }
-      );
-    }
-
-    // --------------------------------------------------
-    // Save / update answer
-    // --------------------------------------------------
-
-    const { error: answerError } = await supabaseAdmin
-      .from("creative_answers")
-      .upsert(
-        {
-          creative_session_id: sessionId,
-          question_key: questionKey,
-          answer,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "creative_session_id,question_key",
+      if (width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
         }
-      );
 
-    if (answerError) {
-      console.error(answerError);
-
-      return NextResponse.json(
-        { error: "Failed to save answer" },
-        { status: 500 }
-      );
+        currentLine = word;
+      }
     }
 
-    // --------------------------------------------------
-    // Q01 + Bad = Rest screen
-    // --------------------------------------------------
-
-    if (
-      questionKey === "q01" &&
-      answer === "bad" &&
-      !continueAnyway
-    ) {
-      return NextResponse.json({
-        success: true,
-        needsRest: true,
-      });
+    if (currentLine) {
+      lines.push(currentLine);
     }
+  }
 
-    // --------------------------------------------------
-    // Get every answer belonging to this session
-    // --------------------------------------------------
-
-    const { data: savedAnswers, error: answersError } =
-      await supabaseAdmin
-        .from("creative_answers")
-        .select("question_key, answer")
-        .eq("creative_session_id", sessionId);
-
-    if (answersError) {
-      console.error(answersError);
-
-      return NextResponse.json(
-        { error: "Failed to load saved answers" },
-        { status: 500 }
-      );
-    }
-
-    const answers: Record<string, unknown> = {};
-
-    for (const savedAnswer of savedAnswers ?? []) {
-      answers[savedAnswer.question_key] = savedAnswer.answer;
-    }
-
-    // Make absolutely sure the answer we just saved is included
-    answers[questionKey] = answer;
-
-    // --------------------------------------------------
-    // Find the next question whose conditions match
-    // --------------------------------------------------
-
-    const { data: questions, error: questionsError } =
-      await supabaseAdmin
-        .from("creative_questions")
-        .select(
-          "question_key, display_order, conditions, is_active"
-        )
-        .eq("is_active", true)
-        .gt("display_order", session.current_question)
-        .order("display_order", { ascending: true });
-
-    if (questionsError) {
-      console.error(questionsError);
-
-      return NextResponse.json(
-        { error: "Failed to find next question" },
-        { status: 500 }
-      );
-    }
-
-    const nextQuestion = (questions ?? []).find((candidate) => {
-      return conditionsMatch(
-        candidate.conditions as Conditions | null,
-        answers
-      );
-    });
-
-    // --------------------------------------------------
-    // No more applicable questions
-    // --------------------------------------------------
-
-   if (!nextQuestion) {
-  return NextResponse.json({
-    success: true,
-    readyToSubmit: true,
-    currentQuestion: session.current_question,
-  });
+  return lines;
 }
 
-    // --------------------------------------------------
-    // Move session to next applicable question
-    // --------------------------------------------------
+export async function GET(request: Request) {
+  const { authorized } = await requireAdmin();
 
-    const { error: updateError } = await supabaseAdmin
-      .from("creative_sessions")
-      .update({
-        current_question: nextQuestion.display_order,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", sessionId);
+  if (!authorized) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
 
-    if (updateError) {
-      console.error(updateError);
+  const { searchParams } = new URL(request.url);
 
-      return NextResponse.json(
-        {
-          error:
-            "Answer saved, but failed to move to next question",
-        },
-        { status: 500 }
-      );
-    }
+  const accessCardId =
+    searchParams.get('access_card_id');
 
-    return NextResponse.json({
-      success: true,
-      currentQuestion: nextQuestion.display_order,
-      questionKey: nextQuestion.question_key,
-    });
+  const download =
+    searchParams.get('download') === 'true' ||
+    searchParams.get('format') === 'pdf';
 
-  } catch (error) {
-    console.error(error);
+  if (!accessCardId) {
+    return NextResponse.json(
+      { error: 'Access card ID is required.' },
+      { status: 400 }
+    );
+  }
+
+  const { data: accessCard, error: accessCardError } =
+    await supabaseAdmin
+      .from('access_cards')
+      .select('id, name, email')
+      .eq('id', accessCardId)
+      .single();
+
+  if (accessCardError || !accessCard) {
+    return NextResponse.json(
+      { error: 'Client not found.' },
+      { status: 404 }
+    );
+  }
+
+  const { data: session, error: sessionError } =
+    await supabaseAdmin
+      .from('creative_sessions')
+      .select('id, status, submitted_at')
+      .eq('access_card_id', accessCardId)
+      .single();
+
+  if (sessionError || !session) {
+    return NextResponse.json(
+      { error: 'Creative Session not found.' },
+      { status: 404 }
+    );
+  }
+
+  const { data: answers, error: answersError } =
+    await supabaseAdmin
+      .from('creative_answers')
+      .select(
+        'id, question_key, answer, created_at, updated_at'
+      )
+      .eq('creative_session_id', session.id);
+
+  if (answersError) {
+    console.error(
+      'ADMIN CREATIVE ANSWERS ERROR:',
+      answersError
+    );
 
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: 'Unable to load creative answers.' },
       { status: 500 }
     );
   }
+
+  const questionKeys = [
+    ...new Set(
+      (answers ?? [])
+        .map((answer) => answer.question_key)
+        .filter(Boolean)
+    ),
+  ];
+
+  const { data: questions, error: questionsError } =
+    questionKeys.length > 0
+      ? await supabaseAdmin
+          .from('creative_questions')
+          .select(
+            'question_key, question, question_type, options, display_order'
+          )
+          .in('question_key', questionKeys)
+      : { data: [], error: null };
+
+  if (questionsError) {
+    console.error(
+      'ADMIN CREATIVE QUESTIONS ERROR:',
+      questionsError
+    );
+
+    return NextResponse.json(
+      { error: 'Unable to load creative questions.' },
+      { status: 500 }
+    );
+  }
+
+  const questionMap = new Map(
+    (questions ?? []).map((question) => [
+      question.question_key,
+      question,
+    ])
+  );
+
+  const combinedAnswers = (answers ?? [])
+    .map((answer) => ({
+      ...answer,
+      question:
+        questionMap.get(answer.question_key) ?? null,
+    }))
+    .sort(
+      (a, b) =>
+        (a.question?.display_order ?? 9999) -
+        (b.question?.display_order ?? 9999)
+    );
+
+  /*
+   * NORMAL JSON RESPONSE
+   */
+
+  if (!download) {
+    return NextResponse.json({
+      success: true,
+      client: accessCard,
+      session: {
+        id: session.id,
+        status: session.status,
+        submitted_at: session.submitted_at,
+      },
+      answers: combinedAnswers,
+    });
+  }
+
+  /*
+   * PDF RESPONSE
+   */
+
+  const pdfDoc = await PDFDocument.create();
+
+  const regularFont = await pdfDoc.embedFont(
+    StandardFonts.Helvetica
+  );
+
+  const italicFont = await pdfDoc.embedFont(
+    StandardFonts.HelveticaOblique
+  );
+
+  const boldFont = await pdfDoc.embedFont(
+    StandardFonts.HelveticaBold
+  );
+
+  const PAGE_WIDTH = 595.28;
+  const PAGE_HEIGHT = 841.89;
+
+  const MARGIN_X = 54;
+  const TOP_MARGIN = 58;
+  const BOTTOM_MARGIN = 58;
+
+  const BODY_WIDTH =
+    PAGE_WIDTH - MARGIN_X * 2;
+
+  let page = pdfDoc.addPage([
+    PAGE_WIDTH,
+    PAGE_HEIGHT,
+  ]);
+
+  let y = PAGE_HEIGHT - TOP_MARGIN;
+
+  function drawFooter() {
+    page.drawText(
+      'QUALE STUDIOS  /  CREATIVE SESSION',
+      {
+        x: MARGIN_X,
+        y: 28,
+        size: 7,
+        font: regularFont,
+        color: rgb(0.55, 0.55, 0.55),
+      }
+    );
+
+    page.drawText(
+      String(pdfDoc.getPageCount()),
+      {
+        x: PAGE_WIDTH - MARGIN_X - 10,
+        y: 28,
+        size: 7,
+        font: regularFont,
+        color: rgb(0.55, 0.55, 0.55),
+      }
+    );
+  }
+
+  function addPage() {
+    page = pdfDoc.addPage([
+      PAGE_WIDTH,
+      PAGE_HEIGHT,
+    ]);
+
+    y = PAGE_HEIGHT - TOP_MARGIN;
+  }
+
+  function ensureSpace(requiredHeight: number) {
+    if (y - requiredHeight < BOTTOM_MARGIN) {
+      drawFooter();
+      addPage();
+    }
+  }
+
+  /*
+   * HEADER
+   */
+
+  page.drawText('QUALE', {
+    x: MARGIN_X,
+    y,
+    size: 14,
+    font: italicFont,
+    color: rgb(0.15, 0.15, 0.15),
+  });
+
+  y -= 62;
+
+  page.drawText('Creative Session', {
+    x: MARGIN_X,
+    y,
+    size: 28,
+    font: italicFont,
+    color: rgb(0.08, 0.08, 0.08),
+  });
+
+  y -= 22;
+
+  page.drawText('Client Creative Brief', {
+    x: MARGIN_X,
+    y,
+    size: 10,
+    font: regularFont,
+    color: rgb(0.45, 0.45, 0.45),
+  });
+
+  y -= 48;
+
+  page.drawLine({
+    start: {
+      x: MARGIN_X,
+      y,
+    },
+    end: {
+      x: PAGE_WIDTH - MARGIN_X,
+      y,
+    },
+    thickness: 0.7,
+    color: rgb(0.82, 0.82, 0.82),
+  });
+
+  y -= 38;
+
+  page.drawText(
+    pdfSafeText(accessCard.name || 'Client'),
+    {
+      x: MARGIN_X,
+      y,
+      size: 19,
+      font: boldFont,
+      color: rgb(0.08, 0.08, 0.08),
+    }
+  );
+
+  y -= 20;
+
+  if (accessCard.email) {
+    page.drawText(
+      pdfSafeText(accessCard.email),
+      {
+        x: MARGIN_X,
+        y,
+        size: 9,
+        font: regularFont,
+        color: rgb(0.42, 0.42, 0.42),
+      }
+    );
+
+    y -= 22;
+  }
+
+  page.drawText(
+    `Session status: ${pdfSafeText(session.status)}`,
+    {
+      x: MARGIN_X,
+      y,
+      size: 8,
+      font: regularFont,
+      color: rgb(0.42, 0.42, 0.42),
+    }
+  );
+
+  if (session.submitted_at) {
+    y -= 15;
+
+    const submittedDate = new Date(
+      session.submitted_at
+    ).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    page.drawText(
+      `Submitted: ${pdfSafeText(submittedDate)}`,
+      {
+        x: MARGIN_X,
+        y,
+        size: 8,
+        font: regularFont,
+        color: rgb(0.42, 0.42, 0.42),
+      }
+    );
+  }
+
+  y -= 55;
+
+  /*
+   * ANSWERS
+   */
+
+  if (combinedAnswers.length === 0) {
+    page.drawText(
+      'No answers have been submitted.',
+      {
+        x: MARGIN_X,
+        y,
+        size: 11,
+        font: regularFont,
+        color: rgb(0.4, 0.4, 0.4),
+      }
+    );
+  } else {
+    for (
+      let index = 0;
+      index < combinedAnswers.length;
+      index++
+    ) {
+      const item = combinedAnswers[index];
+
+      const questionText =
+        item.question?.question ||
+        item.question_key;
+
+      const answerText =
+        formatAnswer(item.answer);
+
+      const questionLines = wrapText(
+        questionText,
+        italicFont,
+        13,
+        BODY_WIDTH
+      );
+
+      const answerLines = wrapText(
+        answerText,
+        regularFont,
+        10.5,
+        BODY_WIDTH
+      );
+
+      const estimatedHeight =
+        18 +
+        questionLines.length * 17 +
+        13 +
+        answerLines.length * 15 +
+        30;
+
+      ensureSpace(
+        Math.min(
+          estimatedHeight,
+          PAGE_HEIGHT -
+            TOP_MARGIN -
+            BOTTOM_MARGIN
+        )
+      );
+
+      page.drawText(
+        String(index + 1).padStart(2, '0'),
+        {
+          x: MARGIN_X,
+          y,
+          size: 8,
+          font: boldFont,
+          color: rgb(0.58, 0.58, 0.58),
+        }
+      );
+
+      y -= 17;
+
+      for (const line of questionLines) {
+        page.drawText(line, {
+          x: MARGIN_X,
+          y,
+          size: 13,
+          font: italicFont,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        y -= 17;
+      }
+
+      y -= 7;
+
+      for (const line of answerLines) {
+        page.drawText(line, {
+          x: MARGIN_X,
+          y,
+          size: 10.5,
+          font: regularFont,
+          color: rgb(0.32, 0.32, 0.32),
+        });
+
+        y -= 15;
+      }
+
+      y -= 23;
+
+      if (
+        index <
+        combinedAnswers.length - 1
+      ) {
+        page.drawLine({
+          start: {
+            x: MARGIN_X,
+            y,
+          },
+          end: {
+            x: PAGE_WIDTH - MARGIN_X,
+            y,
+          },
+          thickness: 0.45,
+          color: rgb(0.87, 0.87, 0.87),
+        });
+
+        y -= 25;
+      }
+    }
+  }
+
+  drawFooter();
+
+  const pdfBytes = await pdfDoc.save();
+
+  const pdfBuffer = new ArrayBuffer(
+    pdfBytes.byteLength
+  );
+
+  new Uint8Array(pdfBuffer).set(pdfBytes);
+
+  const fileName = `${sanitizeFileName(
+    accessCard.name || 'client'
+  )}-creative-session.pdf`;
+
+  return new Response(pdfBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Cache-Control': 'no-store',
+    },
+  });
 }

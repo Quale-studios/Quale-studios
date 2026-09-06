@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import AdminProgressEditor from './AdminProgressEditor';
+import ScrollToTop from "@/app/private/[privateId]/track-progress/ScrollToTop";
 
 export default async function AdminPage() {
   const { authorized } = await requireAdmin();
@@ -61,6 +62,7 @@ export default async function AdminPage() {
 
   return (
     <main className="min-h-screen bg-black px-6 py-24 text-white sm:px-10 sm:py-28 md:px-16 md:py-32">
+      <ScrollToTop />
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-16">
           <h1 className="text-4xl font-light italic sm:text-5xl md:text-6xl">

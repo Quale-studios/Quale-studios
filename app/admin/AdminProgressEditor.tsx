@@ -63,6 +63,7 @@ export default function AdminProgressEditor({
 
   const [rows, setRows] = useState(progress);
   const [openStageId, setOpenStageId] = useState<string | null>(null);
+  const [clientActionsOpen, setClientActionsOpen] = useState(false);
 
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -164,9 +165,46 @@ export default function AdminProgressEditor({
               Active Client
             </p>
 
-            <h2 className="text-4xl font-light italic text-white sm:text-5xl">
-              {selectedClient?.name || 'Client'}
-            </h2>
+            <button
+  type="button"
+  onClick={() => {
+    setClientActionsOpen((current) => !current);
+    setOpenStageId(null);
+    setError(null);
+    setSavedId(null);
+  }}
+  className="group text-left"
+>
+  <h2 className="text-4xl font-light italic text-white transition sm:text-5xl">
+    {selectedClient?.name || 'Client'}
+  </h2>
+
+  <p className="mt-3 text-xs uppercase tracking-[0.22em] text-white/35 transition group-hover:text-white/60">
+    {clientActionsOpen ? 'Close Client Controls' : 'Open Client Controls'}
+  </p>
+</button>
+
+{clientActionsOpen && selectedClient && (
+  <div className="mt-7 flex flex-wrap items-center gap-6">
+    <a
+      href={`/admin/creative-answers?access_card_id=${encodeURIComponent(
+        selectedClient.id
+      )}`}
+      className="border border-white/40 px-6 py-3 text-xs uppercase tracking-[0.2em] text-white transition hover:border-white hover:bg-white hover:text-black"
+    >
+      Read Answers
+    </a>
+
+   <a
+  href={`/api/admin/creative-answers?access_card_id=${encodeURIComponent(
+    selectedClient.id
+  )}&download=true&format=pdf`}
+  className="text-xs uppercase tracking-[0.2em] text-white/45 transition hover:text-white"
+>
+  Download Answers →
+</a>
+  </div>
+)}
 
             <p className="mt-3 text-base text-white/55">
               {selectedClient?.email}

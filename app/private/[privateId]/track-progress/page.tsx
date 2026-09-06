@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import ScrollToTop from "./ScrollToTop";
 
 export default async function TrackProgressPage({
   params,
@@ -46,6 +47,7 @@ export default async function TrackProgressPage({
 
   return (
     <main className="min-h-[calc(100dvh-80px)] w-full overflow-x-hidden bg-black px-6 py-24 text-white sm:px-10 sm:py-28 md:px-16 md:py-32">
+      <ScrollToTop />
       <div className="mx-auto w-full max-w-5xl">
 
         {/* Page heading */}
