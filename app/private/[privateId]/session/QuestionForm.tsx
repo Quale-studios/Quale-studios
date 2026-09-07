@@ -396,8 +396,8 @@ if (completed) {
     <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
 
       {/* Main question */}
-      <div
-  className={`absolute inset-0 z-10 flex items-center justify-center px-8 pointer-events-none transition-opacity duration-700 ease-out ${
+     <div
+  className={`absolute inset-0 z-10 flex items-center justify-center px-8 -translate-y-4 sm:-translate-y-5 md:-translate-y-6 pointer-events-none transition-opacity duration-700 ease-out ${
     isVisible ? "opacity-100" : "opacity-0"
   }`}
 >

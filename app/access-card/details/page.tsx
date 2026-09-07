@@ -148,11 +148,11 @@ razorpay.open();
 ) : (
       <form
         onSubmit={handleContinue}
-        className="relative min-h-screen"
+       className="relative min-h-[calc(100svh-80px)] md:min-h-[calc(100vh-80px)]"
       >
 
         {/* Your Name */}
-        <div className="absolute left-[50%] top-[25%] -translate-x-1/2 text-center md:top-[34%]">
+        <div className="absolute left-[50%] top-[25%] -translate-x-1/2 text-center md:left-[49%] top-[31%]">
           <h1 className="font italic text-2xl md:text-5xl">
             Your Name?
           </h1>
@@ -167,7 +167,7 @@ razorpay.open();
         </div>
 
         {/* Business Name */}
-        <div className="absolute left-[50%] top-[40%] -translate-x-1/2 text-center md:top-[48%]">
+        <div className="absolute left-[50%] top-[40%] -translate-x-1/2 text-center md:left-[49%] top-[45%]">
           <h1 className="font italic text-2xl md:text-5xl">
             Your Business Name?
           </h1>
@@ -182,7 +182,7 @@ razorpay.open();
         </div>
 
         {/* E-mail */}
-        <div className="absolute left-[50%] top-[55%] -translate-x-1/2 text-center md:top-[62%]">
+        <div className="absolute left-[50%] top-[55%] -translate-x-1/2 text-center md:left-[49%] top-[59%]">
           <h1 className="font italic text-2xl md:text-5xl">
             Your E-mail ID?
           </h1>

@@ -34,7 +34,7 @@ useEffect(() => {
   return (
     <main className="min-h-screen bg-black text-white">
 
-      <section className="relative min-h-screen px-6 md:px-40">
+      <section className="relative min-h-[calc(100svh-170px)] px-6 md:px-40">
 
         {/* Line 1 */}
         <div className="absolute left-14 top-[36%] font italic text-3xl text-white md:left-59 md:top-[31%] md:text-7xl">

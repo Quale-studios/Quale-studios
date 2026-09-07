@@ -148,7 +148,7 @@ useEffect(() => {
 
       
 
-      <div className="flex min-h-[100svh] md:min-h-screen flex-col items-center justify-center">
+      <div className="flex min-h-[calc(100svh-150px)] flex-col items-center justify-center">
         <h1 className="fade-up w-full text-center text-5xl md:text-9xl italic font-light text-white tracking-[-0.03em]">
           Quale Studios
         </h1>
