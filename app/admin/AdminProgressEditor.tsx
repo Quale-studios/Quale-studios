@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type AccessCard = {
   id: string;
@@ -62,7 +62,16 @@ export default function AdminProgressEditor({
   );
 
   const [rows, setRows] = useState(progress);
-  const [openStageId, setOpenStageId] = useState<string | null>(null);
+ const [openStageId, setOpenStageId] = useState<string | null>(null);
+
+useEffect(() => {
+  const savedStageId = sessionStorage.getItem(
+    `admin-open-stage-${selectedClientId}`
+  );
+
+  setOpenStageId(savedStageId);
+}, [selectedClientId]);
+
   const [clientActionsOpen, setClientActionsOpen] = useState(false);
 
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -222,12 +231,16 @@ export default function AdminProgressEditor({
             <select
               id="client"
               value={selectedClientId}
-              onChange={(event) => {
-                setSelectedClientId(event.target.value);
-                setOpenStageId(null);
-                setError(null);
-                setSavedId(null);
-              }}
+             onChange={(event) => {
+  sessionStorage.removeItem(
+    `admin-open-stage-${selectedClientId}`
+  );
+
+  setSelectedClientId(event.target.value);
+  setOpenStageId(null);
+  setError(null);
+  setSavedId(null);
+}}
               className="w-full appearance-none border-b border-white/30 bg-transparent px-0 py-3 text-base text-white outline-none transition focus:border-white/80"
             >
               {accessCards.map((client) => (
@@ -282,11 +295,25 @@ export default function AdminProgressEditor({
                 {/* STAGE ROW */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setOpenStageId(isOpen ? null : row.id);
-                    setError(null);
-                    setSavedId(null);
-                  }}
+                 onClick={() => {
+  const nextStageId = isOpen ? null : row.id;
+
+  setOpenStageId(nextStageId);
+
+  if (nextStageId) {
+    sessionStorage.setItem(
+      `admin-open-stage-${selectedClientId}`,
+      nextStageId
+    );
+  } else {
+    sessionStorage.removeItem(
+      `admin-open-stage-${selectedClientId}`
+    );
+  }
+
+  setError(null);
+  setSavedId(null);
+}}
                   className="group flex w-full items-center gap-5 py-8 text-left transition hover:bg-white/[0.035] sm:gap-9 sm:py-9"
                 >
                   {/* NUMBER */}
@@ -478,7 +505,12 @@ export default function AdminProgressEditor({
 
                         <button
                           type="button"
-                          onClick={() => setOpenStageId(null)}
+                          onClick={() => {
+  setOpenStageId(null);
+  sessionStorage.removeItem(
+    `admin-open-stage-${selectedClientId}`
+  );
+}}
                           className="text-xs uppercase tracking-[0.2em] text-white/40 transition hover:text-white/80"
                         >
                           Close
