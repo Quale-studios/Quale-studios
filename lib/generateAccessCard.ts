@@ -1,11 +1,20 @@
 import sharp from "sharp";
 import { generateQRCode } from "@/lib/generateQRCode";
 
-export async function generateAccessCard(privateId: string) {
-  const { qrCodeDataUrl } = await generateQRCode(privateId);
+export async function generateAccessCard(
+  privateId: string,
+  qrSecret: string
+) {
+  const { qrCodeDataUrl } = await generateQRCode(
+    privateId,
+    qrSecret
+  );
 
   const qrBuffer = Buffer.from(
-    qrCodeDataUrl.replace(/^data:image\/png;base64,/, ""),
+    qrCodeDataUrl.replace(
+      /^data:image\/png;base64,/,
+      ""
+    ),
     "base64"
   );
 
@@ -16,7 +25,9 @@ export async function generateAccessCard(privateId: string) {
     .png()
     .toBuffer();
 
-  const backCard = await sharp("public/access-card/back.png")
+  const backCard = await sharp(
+    "public/access-card/back.png"
+  )
     .composite([
       {
         input: qr,
@@ -27,7 +38,9 @@ export async function generateAccessCard(privateId: string) {
     .png()
     .toBuffer();
 
-  const frontCard = await sharp("public/access-card/front.png")
+  const frontCard = await sharp(
+    "public/access-card/front.png"
+  )
     .png()
     .toBuffer();
 

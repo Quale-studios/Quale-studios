@@ -61,16 +61,16 @@ export default function Navbar() {
 </Link>
 
        <Link
-  href="/contact"
+  href="/prices"
   className={`group relative text-sm md:text-xl italic font-medium tracking-[0.08em] transition-all duration-300 ${
-    isActive("contact")
+    isActive("prices")
       ? "text-white"
       : "text-white/40 hover:text-white"
   }`}
 >
-  Contact
+  Prices
 
-  {isActive("contact") && !isHome && (
+  {isActive("prices") && !isHome && (
   <span className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-px w-[90%] bg-white" />
 )}
 

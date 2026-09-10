@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { cookies } from "next/headers";
 import ScrollPosition from "./ScrollPosition";
 import Link from "next/link";
-
 
 export default async function PrivatePage({
   params,
@@ -10,12 +10,44 @@ export default async function PrivatePage({
 }) {
   const { privateId } = await params;
 
-  const { data: accessCard, error } = await supabaseAdmin
-  .from("access_cards")
-  .select("id, name, business_name, private_id, is_active")
-  .eq("private_id", privateId)
-  .eq("is_active", true)
-  .single();
+// --------------------------------------------------
+// PRIVATE ACCESS COOKIE CHECK
+// --------------------------------------------------
+
+const cookieStore = await cookies();
+
+const authorizedPrivateId =
+  cookieStore.get("quale_private_access")?.value;
+
+if (
+  typeof authorizedPrivateId !== "string" ||
+  authorizedPrivateId.length !== 64 ||
+  authorizedPrivateId !== privateId
+) {
+  return (
+    <main className="min-h-screen bg-black text-white">
+      <div className="flex min-h-screen items-center justify-center">
+        <h1 className="font italic text-5xl">
+          Access Denied
+        </h1>
+      </div>
+    </main>
+  );
+}
+
+// --------------------------------------------------
+// FIND ACTIVE ACCESS CARD
+// --------------------------------------------------
+
+const { data: accessCard, error } =
+  await supabaseAdmin
+    .from("access_cards")
+    .select(
+      "id, name, business_name, private_id, is_active"
+    )
+    .eq("private_id", privateId)
+    .eq("is_active", true)
+    .single();
 
   if (error || !accessCard) {
     return (
@@ -62,10 +94,11 @@ if (!creativeSession) {
   return (
   <main className="min-h-screen bg-black text-white">
     <ScrollPosition />
+
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
-      
+
       {/* Cinematic studio light */}
-      
+
 
       {/* Welcome text */}
       <div className="relative z-10 text-center">

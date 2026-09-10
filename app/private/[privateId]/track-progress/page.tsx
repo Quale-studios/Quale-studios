@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import ScrollToTop from "./ScrollToTop";
+import { cookies } from "next/headers";
 
 export default async function TrackProgressPage({
   params,
@@ -8,8 +9,35 @@ export default async function TrackProgressPage({
 }) {
   const { privateId } = await params;
 
-  // Find the client using their private page ID
-  const { data: accessCard, error: accessError } = await supabaseAdmin
+// --------------------------------------------------
+// PRIVATE ACCESS COOKIE CHECK
+// --------------------------------------------------
+
+const cookieStore = await cookies();
+
+const authorizedPrivateId =
+  cookieStore.get("quale_private_access")?.value;
+
+if (
+  typeof authorizedPrivateId !== "string" ||
+  authorizedPrivateId.length !== 64 ||
+  authorizedPrivateId !== privateId
+) {
+  return (
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <h1 className="text-5xl italic">
+        Access Denied
+      </h1>
+    </main>
+  );
+}
+
+// --------------------------------------------------
+// FIND ACTIVE ACCESS CARD
+// --------------------------------------------------
+
+const { data: accessCard, error: accessError } =
+  await supabaseAdmin
     .from("access_cards")
     .select("id, private_id, is_active")
     .eq("private_id", privateId)
@@ -60,56 +88,79 @@ export default async function TrackProgressPage({
         {/* Progress */}
         <div className="flex flex-col">
 
-          {progress?.map((stage, index) => (
-            <div key={stage.stage_key}>
+                  {progress?.map((stage, index) => (
+          <div key={stage.stage_key}>
 
-              {/* Stage */}
-              <section>
-                <h2
-                  className={
-                    stage.stage_key === "creative_materials"
-                      ? "max-w-4xl text-2xl font-light italic leading-relaxed sm:text-3xl md:text-4xl"
-                      : "text-2xl font-light italic sm:text-3xl md:text-4xl"
-                  }
-                >
-                  {stage.stage_name}
-                </h2>
+            {/* Stage */}
+            <section>
+              <h2
+                className={
+                  stage.stage_key === "creative_materials"
+                    ? "max-w-4xl text-2xl font-light italic leading-relaxed sm:text-3xl md:text-4xl"
+                    : "text-2xl font-light italic sm:text-3xl md:text-4xl"
+                }
+              >
+                {stage.stage_name}
+              </h2>
 
-                {/* Status */}
-                <p
-  className={`mt-3 text-lg font-light italic sm:text-xl md:text-2xl ${
-    stage.status === "locked"
-      ? "text-white/35"
-      : "text-white/50"
-  }`}
->
-  {stage.client_message ||
-    (stage.status === "completed" && "Completed") ||
-    (stage.status === "preparing" && "Preparing") ||
-    (stage.status === "locked" && "Locked")}
-</p>
-                
+              {/* Status */}
+              <p
+                className={`mt-3 text-lg font-light italic sm:text-xl md:text-2xl ${
+                  stage.status === "locked"
+                    ? "text-white/35"
+                    : "text-white/50"
+                }`}
+              >
+                {stage.client_message ||
+                  (stage.status === "completed" && "Completed") ||
+                  (stage.status === "preparing" && "Preparing") ||
+                  (stage.status === "locked" && "Locked")}
+              </p>
 
- 
-
-                {/* Expected date */}
-                {stage.target_date && (
-                  <p className="mt-2 text-base font-light italic text-white/40 sm:text-lg">
-                    Expected by {stage.target_date}
-                  </p>
-                )}
-              </section>
-
-              {/* Connector */}
-              {index < progress.length - 1 && (
-                <div className="ml-1 h-20 w-px bg-white/25 sm:h-24" />
+              {/* Expected date */}
+              {stage.target_date && (
+                <p className="mt-2 text-base font-light italic text-white/40 sm:text-lg">
+                  Expected by {stage.target_date}
+                </p>
               )}
+            </section>
 
-            </div>
-          ))}
+            {/* Connector */}
+            {index < progress.length - 1 && (
+              <div className="ml-1 h-20 w-px bg-white/25 sm:h-24" />
+            )}
 
-        </div>
+          </div>
+        ))}
+
       </div>
-    </main>
+
+                    {/* Prices information */}
+          <div className="mt-20 sm:mt-24 md:mt-28">
+            <p className="max-w-5xl text-2xl font-light italic leading-relaxed text-white sm:text-3xl md:text-4xl">
+              You can unlock (Pre-Production, Production, and Post-Production)
+              by reviewing our deliverables and by paying the film's,
+            </p>
+
+            <p className="mt-8 max-w-5xl text-xl font-light italic leading-relaxed text-white/40 sm:text-2xl md:text-3xl">
+              (which you selected in the Creative Session, e.g., Brand Film,
+              Product Film, Ad Film, or Corporate Film)...
+            </p>
+
+            <div className="mt-16 flex justify-end sm:mt-20 md:mt-24">
+              <a
+                href="/prices"
+                className="group relative inline-block text-2xl font-light italic text-white sm:text-3xl md:text-4xl"
+              >
+                <span className="relative inline-block">
+                  Prices
+
+                  <span className="absolute -bottom-2 left-0 h-px w-full origin-left scale-x-0 bg-white transition-transform duration-500 ease-out group-hover:scale-x-100" />
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </main>
   );
 }

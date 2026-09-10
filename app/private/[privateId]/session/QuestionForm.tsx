@@ -9,6 +9,7 @@ type Option = {
 };
 
 type QuestionFormProps = {
+  privateId: string;
   sessionId: string;
   currentQuestion: number;
   sessionStatus: string;
@@ -20,6 +21,7 @@ type QuestionFormProps = {
 };
 
 export default function QuestionForm({
+  privateId,
   sessionId,
   currentQuestion,
   sessionStatus,
@@ -350,7 +352,7 @@ if (completed) {
   </p>
 
   <Link
-  href={`/private/$[privateId]/track-progress`}
+ href={`/private/${privateId}/track-progress`}
   type="button"
   className="
     relative

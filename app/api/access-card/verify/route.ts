@@ -46,10 +46,12 @@ export async function POST(request: Request) {
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(generatedSignature),
-      Buffer.from(razorpay_signature)
-    );
+    const isValid =
+  generatedSignature.length === razorpay_signature.length &&
+  crypto.timingSafeEqual(
+    Buffer.from(generatedSignature),
+    Buffer.from(razorpay_signature)
+  );
 
     if (!isValid) {
       return NextResponse.json(
@@ -79,11 +81,32 @@ if (
     }
 
     // Generate unique Private ID
-    const privateId = crypto.randomBytes(32).toString("hex");
+const privateId = crypto.randomBytes(32).toString("hex");
 
-    console.log("Private ID generated:", privateId);
-    const { frontCard, backCard } =
-  await generateAccessCard(privateId);
+// Generate separate secret for the Access Card QR
+const qrSecret = crypto.randomBytes(32).toString("hex");
+
+// Store only the hash of the QR secret
+const qrSecretHash = crypto
+  .createHash("sha256")
+  .update(qrSecret)
+  .digest("hex");
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+if (!siteUrl) {
+  throw new Error("NEXT_PUBLIC_SITE_URL is not configured");
+}
+
+const accessUrl =
+  `${siteUrl}/private/activate` +
+  `?privateId=${encodeURIComponent(privateId)}` +
+  `&token=${encodeURIComponent(qrSecret)}`;
+
+console.log("Private ID generated:", privateId);
+
+const { frontCard, backCard } =
+  await generateAccessCard(privateId, qrSecret);
 
 console.log("Access Card generated for Private ID:", privateId);
 
@@ -99,6 +122,7 @@ console.log("Access Card PDF generated:", privateId);
         .from("access_cards")
         .insert({
           private_id: privateId,
+           qr_secret_hash: qrSecretHash,
           name,
           business_name: businessName,
           email,
@@ -121,13 +145,15 @@ console.log("Access Card PDF generated:", privateId);
     }
 
     console.log("Access Card saved:", accessCard);
-    
+
 try {
   await sendAccessCardEmail(
     email,
-    accessCardPDF
+    accessCardPDF,
+    accessUrl
   );
 } catch (emailError) {
+
   console.error("Access Card email failed:", emailError);
 }
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requirePrivateAccess } from "@/lib/privateAccess";
 
 type Condition = {
   question: string;
@@ -27,12 +28,10 @@ function conditionsMatch(
   conditions: Conditions | null,
   answers: Record<string, unknown>
 ) {
-  // No conditions = normal/main question
   if (!conditions) {
     return true;
   }
 
-  // ALL conditions must be true
   if (conditions.all) {
     const allMatch = conditions.all.every((condition) => {
       const answer = answers[condition.question];
@@ -45,7 +44,6 @@ function conditionsMatch(
     }
   }
 
-  // ANY condition can be true
   if (conditions.any) {
     const anyMatch = conditions.any.some((condition) => {
       const answer = answers[condition.question];
@@ -63,9 +61,31 @@ function conditionsMatch(
 
 export async function POST(request: Request) {
   try {
-    const { sessionId } = await request.json();
+    // --------------------------------------------------
+    // PRIVATE ACCESS CHECK
+    // --------------------------------------------------
 
-    if (!sessionId) {
+    const { authorized, accessCard } =
+      await requirePrivateAccess();
+
+    if (!authorized || !accessCard) {
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // --------------------------------------------------
+    // READ REQUEST
+    // --------------------------------------------------
+
+    const body = await request.json();
+    const sessionId = body?.sessionId;
+
+    if (
+      typeof sessionId !== "string" ||
+      !sessionId
+    ) {
       return NextResponse.json(
         { error: "Missing session ID" },
         { status: 400 }
@@ -73,14 +93,17 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------
-    // Get Creative Session
+    // GET CREATIVE SESSION
     // --------------------------------------------------
 
     const { data: session, error: sessionError } =
       await supabaseAdmin
         .from("creative_sessions")
-        .select("id, current_question, status")
+        .select(
+          "id, access_card_id, current_question, status"
+        )
         .eq("id", sessionId)
+        .eq("access_card_id", accessCard.id)
         .single();
 
     if (sessionError || !session) {
@@ -90,14 +113,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // --------------------------------------------------
+    // SUBMITTED SESSIONS ARE LOCKED
+    // --------------------------------------------------
+
     if (session.status === "submitted") {
       return NextResponse.json(
-        { error: "Creative session already submitted" },
+        {
+          error: "Creative session already submitted",
+        },
         { status: 400 }
       );
     }
 
-    // Never go before Q1
+    // --------------------------------------------------
+    // NEVER GO BEFORE Q1
+    // --------------------------------------------------
+
     if (session.current_question <= 1) {
       return NextResponse.json({
         success: true,
@@ -106,17 +138,22 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------
-    // Get every saved answer
+    // GET EVERY SAVED ANSWER
     // --------------------------------------------------
 
-    const { data: savedAnswers, error: answersError } =
-      await supabaseAdmin
-        .from("creative_answers")
-        .select("question_key, answer")
-        .eq("creative_session_id", sessionId);
+    const {
+      data: savedAnswers,
+      error: answersError,
+    } = await supabaseAdmin
+      .from("creative_answers")
+      .select("question_key, answer")
+      .eq("creative_session_id", sessionId);
 
     if (answersError) {
-      console.error(answersError);
+      console.error(
+        "CREATIVE ANSWERS LOAD ERROR:",
+        answersError
+      );
 
       return NextResponse.json(
         { error: "Failed to load session answers" },
@@ -127,24 +164,32 @@ export async function POST(request: Request) {
     const answers: Record<string, unknown> = {};
 
     for (const savedAnswer of savedAnswers ?? []) {
-      answers[savedAnswer.question_key] = savedAnswer.answer;
+      answers[savedAnswer.question_key] =
+        savedAnswer.answer;
     }
 
     // --------------------------------------------------
-    // Get all active questions
+    // GET ALL ACTIVE QUESTIONS
     // --------------------------------------------------
 
-    const { data: questions, error: questionsError } =
-      await supabaseAdmin
-        .from("creative_questions")
-        .select(
-          "question_key, display_order, conditions, is_active"
-        )
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
+    const {
+      data: questions,
+      error: questionsError,
+    } = await supabaseAdmin
+      .from("creative_questions")
+      .select(
+        "question_key, display_order, conditions, is_active"
+      )
+      .eq("is_active", true)
+      .order("display_order", {
+        ascending: true,
+      });
 
     if (questionsError) {
-      console.error(questionsError);
+      console.error(
+        "CREATIVE QUESTIONS LOAD ERROR:",
+        questionsError
+      );
 
       return NextResponse.json(
         { error: "Failed to load creative questions" },
@@ -153,13 +198,14 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------
-    // Find closest applicable previous question
+    // FIND CLOSEST APPLICABLE PREVIOUS QUESTION
     // --------------------------------------------------
 
     const previousQuestion = (questions ?? [])
       .filter(
         (question) =>
-          question.display_order < session.current_question
+          question.display_order <
+          session.current_question
       )
       .reverse()
       .find((question) =>
@@ -170,7 +216,7 @@ export async function POST(request: Request) {
       );
 
     // --------------------------------------------------
-    // Nothing applicable before this question
+    // NOTHING APPLICABLE BEFORE THIS QUESTION
     // --------------------------------------------------
 
     if (!previousQuestion) {
@@ -181,19 +227,25 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------
-    // Move session backward
+    // MOVE SESSION BACKWARD
     // --------------------------------------------------
 
-    const { error: updateError } = await supabaseAdmin
-      .from("creative_sessions")
-      .update({
-        current_question: previousQuestion.display_order,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", sessionId);
+    const { error: updateError } =
+      await supabaseAdmin
+        .from("creative_sessions")
+        .update({
+          current_question:
+            previousQuestion.display_order,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sessionId)
+        .eq("access_card_id", accessCard.id);
 
     if (updateError) {
-      console.error(updateError);
+      console.error(
+        "CREATIVE SESSION PREVIOUS UPDATE ERROR:",
+        updateError
+      );
 
       return NextResponse.json(
         { error: "Failed to go to previous question" },
@@ -203,12 +255,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      currentQuestion: previousQuestion.display_order,
-      questionKey: previousQuestion.question_key,
+      currentQuestion:
+        previousQuestion.display_order,
+      questionKey:
+        previousQuestion.question_key,
     });
-
   } catch (error) {
-    console.error(error);
+    console.error(
+      "CREATIVE PREVIOUS REQUEST ERROR:",
+      error
+    );
 
     return NextResponse.json(
       { error: "Something went wrong" },

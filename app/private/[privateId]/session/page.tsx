@@ -75,6 +75,7 @@ export default async function QuestionsPage({
   <main className="min-h-[calc(100dvh-80px)] w-full bg-black text-white">
     <QuestionForm
   key={question.question_key}
+  privateId={privateId}
   sessionId={session.id}
   questionKey={question.question_key}
   question={question.question}
